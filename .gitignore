@@ -1,0 +1,8 @@
+# Secrets — never commit real credentials
+.env
+
+# Backup artifacts
+backups/
+*.sql
+*.sql.gz
+*.dump
