@@ -19,6 +19,9 @@ if (-not (Test-Path -LiteralPath $BackupFile)) {
     Write-Error "Backup file not found: $BackupFile"
     exit 1
 }
+# Resolve to an absolute path so .NET file APIs (which use the process working
+# directory, not the PowerShell location) read the right file.
+$BackupFile = (Resolve-Path -LiteralPath $BackupFile).Path
 
 function Expand-GZipFile {
     param([string]$InFile, [string]$OutFile)

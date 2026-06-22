@@ -162,11 +162,32 @@ function Get-RequiredEnv {
 }
 ```
 
-> **Backup file naming:** set `MYSQL_BACKUP_NAME` / `PG_BACKUP_NAME` in `.env` to
-> back up to a predictable, fixed filename (handy for "always restore the latest
-> backup" workflows). The file is **overwritten on every run** — there's no
-> history. Leave it blank to get a unique `<DB>_<timestamp>` name each run.
->
+### Backup file naming rules
+
+`MYSQL_BACKUP_NAME` (and `PG_BACKUP_NAME`) set the output name when **creating** a
+backup. Best practice is a **bare filename** — the script automatically places it
+in the root `backups/` folder:
+
+| Value in `.env` | Resulting file | OK? |
+|---|---|---|
+| *(blank)* | `backups\<DB>_<timestamp>.sql.gz` (unique each run) | ✅ default |
+| `claim_portal_backup` | `backups\claim_portal_backup.sql.gz` (extension auto-added) | ✅ |
+| `claim_portal_backup.sql.gz` | `backups\claim_portal_backup.sql.gz` | ✅ recommended |
+| `backups/claim_portal_backup.sql.gz` | `backups\backups\claim_portal_backup.sql.gz` (double-nested) | ❌ |
+| `/backups/claim_portal_backup.sql.gz` | treated as an **absolute** path (drive root) | ❌ usually fails |
+
+Rules:
+
+- Use just the name. For PostgreSQL use `PG_BACKUP_NAME` with a `.dump` name.
+- **Don't** prefix with `backups/` (double-nests) and **don't** start with `/`
+  (read as an absolute path).
+- The extension is auto-added if missing (`.sql.gz` for MySQL, `.dump` for Postgres).
+- When set, the backup is **overwritten every run** (no history). Leave blank for
+  a unique `<DB>_<timestamp>` name.
+- **Restore** does **not** use this key — it takes the backup file as an explicit
+  argument, e.g.
+  `.\mysql-scripts\mysql-restore.ps1 .\backups\claim_portal_backup.sql.gz`.
+
 > **Passwords:** leave the `*_PASSWORD` keys blank to be prompted securely at
 > runtime. The `.env` file is git-ignored — never commit it.
 
@@ -496,6 +517,8 @@ if (-not (Test-Path -LiteralPath $BackupFile)) {
     Write-Error "Backup file not found: $BackupFile"
     exit 1
 }
+# Resolve to an absolute path so the file is found regardless of the working dir.
+$BackupFile = (Resolve-Path -LiteralPath $BackupFile).Path
 
 function Expand-GZipFile {
     param([string]$InFile, [string]$OutFile)
@@ -765,6 +788,8 @@ if (-not (Test-Path -LiteralPath $BackupFile)) {
     Write-Error "Backup file not found: $BackupFile"
     exit 1
 }
+# Resolve to an absolute path so the file is found regardless of the working dir.
+$BackupFile = (Resolve-Path -LiteralPath $BackupFile).Path
 
 Write-Host "Target database: $TargetHost / $TargetDb"
 $confirm = Read-Host "Type YES to continue"

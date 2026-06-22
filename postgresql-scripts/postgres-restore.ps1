@@ -19,6 +19,8 @@ if (-not (Test-Path -LiteralPath $BackupFile)) {
     Write-Error "Backup file not found: $BackupFile"
     exit 1
 }
+# Resolve to an absolute path so the file is found regardless of the working dir.
+$BackupFile = (Resolve-Path -LiteralPath $BackupFile).Path
 
 Write-Host "Target database: $TargetHost / $TargetDb"
 $confirm = Read-Host "Type YES to continue"
