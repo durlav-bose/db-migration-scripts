@@ -28,6 +28,9 @@ if ($BackupName) {
 
 New-Item -ItemType Directory -Force -Path $BackupDir | Out-Null
 
+$PgDump = Resolve-PgTool $cfg "pg_dump"
+Write-Host "Using pg_dump: $PgDump"
+
 if ($cfg.PG_PASSWORD) {
     $env:PGPASSWORD = $cfg.PG_PASSWORD
 } else {
@@ -36,7 +39,7 @@ if ($cfg.PG_PASSWORD) {
 }
 try {
     Write-Host "Backing up PostgreSQL database: $Db"
-    pg_dump -h $HostName -p $Port -U $User -d $Db -Fc -f $BackupFile
+    & $PgDump -h $HostName -p $Port -U $User -d $Db -Fc -f $BackupFile
     if ($LASTEXITCODE -ne 0) { throw "pg_dump failed (exit $LASTEXITCODE)" }
     Write-Host "Backup completed:"
     Write-Host $BackupFile

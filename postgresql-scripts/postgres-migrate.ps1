@@ -41,6 +41,9 @@ function Get-PlainPassword {
 
 New-Item -ItemType Directory -Force -Path $BackupDir | Out-Null
 
+$PgDump    = Resolve-PgTool $cfg "pg_dump"
+$PgRestore = Resolve-PgTool $cfg "pg_restore"
+
 Write-Host "Starting PostgreSQL migration..."
 Write-Host "Source: $SourceHost/$SourceDb"
 Write-Host "Target: $TargetHost/$TargetDb"
@@ -59,7 +62,7 @@ if ($cfg.PG_PASSWORD) {
     $env:PGPASSWORD = Get-PlainPassword "Enter SOURCE PostgreSQL password for $SourceUser"
 }
 try {
-    pg_dump -h $SourceHost -p $SourcePort -U $SourceUser -d $SourceDb -Fc -f $BackupFile
+    & $PgDump -h $SourceHost -p $SourcePort -U $SourceUser -d $SourceDb -Fc -f $BackupFile
     if ($LASTEXITCODE -ne 0) { throw "pg_dump failed (exit $LASTEXITCODE)" }
     Write-Host "Backup created: $BackupFile"
 }
@@ -74,7 +77,7 @@ if ($cfg.PG_TARGET_PASSWORD) {
     $env:PGPASSWORD = Get-PlainPassword "Enter TARGET PostgreSQL password for $TargetUser"
 }
 try {
-    pg_restore -h $TargetHost -p $TargetPort -U $TargetUser -d $TargetDb `
+    & $PgRestore -h $TargetHost -p $TargetPort -U $TargetUser -d $TargetDb `
         --clean --if-exists --no-owner --no-privileges $BackupFile
     if ($LASTEXITCODE -ne 0) { throw "pg_restore failed (exit $LASTEXITCODE)" }
 }

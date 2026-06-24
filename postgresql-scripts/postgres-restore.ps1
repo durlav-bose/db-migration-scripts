@@ -22,6 +22,9 @@ if (-not (Test-Path -LiteralPath $BackupFile)) {
 # Resolve to an absolute path so the file is found regardless of the working dir.
 $BackupFile = (Resolve-Path -LiteralPath $BackupFile).Path
 
+$PgRestore = Resolve-PgTool $cfg "pg_restore"
+Write-Host "Using pg_restore: $PgRestore"
+
 Write-Host "Target database: $TargetHost / $TargetDb"
 $confirm = Read-Host "Type YES to continue"
 if ($confirm -ne "YES") { Write-Host "Cancelled."; exit 1 }
@@ -34,7 +37,7 @@ if ($cfg.PG_TARGET_PASSWORD) {
 }
 try {
     Write-Host "Restoring $BackupFile to $TargetDb..."
-    pg_restore -h $TargetHost -p $TargetPort -U $TargetUser -d $TargetDb `
+    & $PgRestore -h $TargetHost -p $TargetPort -U $TargetUser -d $TargetDb `
         --clean --if-exists --no-owner --no-privileges $BackupFile
     if ($LASTEXITCODE -ne 0) { throw "pg_restore failed (exit $LASTEXITCODE)" }
     Write-Host "Restore completed successfully."

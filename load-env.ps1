@@ -44,3 +44,28 @@ function Get-RequiredEnv {
     }
     return $Env[$Key]
 }
+
+# Resolve a PostgreSQL client tool (pg_dump, pg_restore, psql, ...).
+# pg_dump/pg_restore must be >= the server version, so when several PostgreSQL
+# installs exist on Windows we default to the newest one rather than whatever is
+# first on PATH. Override with PG_BIN in .env to pin a specific install's bin dir.
+function Resolve-PgTool {
+    param([hashtable]$Env, [string]$Tool)
+
+    if ($Env.PG_BIN) {
+        foreach ($name in @("$Tool.exe", $Tool)) {
+            $candidate = Join-Path $Env.PG_BIN $name
+            if (Test-Path -LiteralPath $candidate) { return $candidate }
+        }
+        throw "PG_BIN is set but '$Tool' was not found in '$($Env.PG_BIN)'"
+    }
+
+    if ($IsWindows -or $env:OS -eq "Windows_NT") {
+        $newest = Get-ChildItem "C:\Program Files\PostgreSQL\*\bin\$Tool.exe" -ErrorAction SilentlyContinue |
+            Sort-Object { [int]($_.Directory.Parent.Name) } -Descending |
+            Select-Object -First 1
+        if ($newest) { return $newest.FullName }
+    }
+
+    return $Tool   # fall back to PATH
+}
